@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="睡眠健身">
+<meta name="robots" content="noindex">
+<title>睡眠健身紀錄</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 配對畫面：第一次使用時出現 -->
+<section id="pairing" hidden>
+  <div class="pair-box">
+    <h1>睡眠健身紀錄</h1>
+    <p class="sub">第一次使用這台裝置，需要先配對。請在 Apps Script 編輯器執行 <code>createPairingLink</code>，取得配對連結。</p>
+    <div class="label">配對連結（整段貼上）</div>
+    <textarea id="pairLink" rows="3" placeholder="https://…#pair=…"></textarea>
+    <details>
+      <summary>沒有連結？改輸入 API 網址和配對碼</summary>
+      <div class="label">API 網址（結尾是 /exec）</div>
+      <input type="url" id="pairApi" placeholder="https://script.google.com/macros/s/…/exec">
+      <div class="label">配對碼</div>
+      <input type="text" id="pairCode" autocapitalize="characters" placeholder="8 個英數字">
+    </details>
+    <div class="label">這台裝置的名稱</div>
+    <input type="text" id="pairName" maxlength="30" placeholder="例如：我的手機、家裡電腦">
+    <button class="btn primary big" data-act="pairGo">配對</button>
+    <div id="pairMsg" class="msg"></div>
+    <p class="hint">iPhone 請先「加入主畫面」，再從主畫面打開這個 App 配對；在 Safari 裡配對的資料不會帶到主畫面的 App。</p>
+  </div>
+</section>
+
+<div id="app" hidden>
+  <header id="top">
+    <span class="title">睡眠健身紀錄</span>
+    <button id="syncPill" class="pill" data-act="syncNow">…</button>
+  </header>
+  <div id="banner"></div>
+  <div id="rest" data-act="restSkip"></div>
+
+  <main>
+    <!-- 睡眠 -->
+    <section class="tab" id="t-sleep">
+      <div class="card" id="sleepMain"></div>
+      <div class="card" id="sleepLast"></div>
+      <div class="card">
+        <details id="sleepBf">
+          <summary>忘記打卡？手動補登</summary>
+          <div class="label">就寢時間</div><input type="datetime-local" id="bfBed">
+          <div class="label">起床時間</div><input type="datetime-local" id="bfWake">
+          <div class="label">睡眠品質（選填）</div><div class="chips" id="bfQ"></div>
+          <button class="btn primary" data-act="sleepBackfill">儲存補登</button>
+        </details>
+      </div>
+    </section>
+
+    <!-- 健身 -->
+    <section class="tab" id="t-workout">
+      <div id="wkNotice"></div>
+      <div class="card"><div class="label top">運動類型</div><div class="chips" id="wType"></div></div>
+      <div class="card" id="cardio">
+        <div class="label top">時長（分鐘）</div><div class="chips" id="cDur"></div>
+        <div class="label">強度</div><div class="chips" id="cInt"></div>
+        <div class="row"><button class="btn" data-act="cardioSame">同上次</button><button class="btn primary" data-act="cardioSave">記錄</button></div>
+        <div class="hint" id="cLast"></div>
+      </div>
+      <div id="strength"></div>
+      <div class="card" id="wkToday"></div>
+      <div class="card">
+        <details id="bwBox">
+          <summary>補登過去的運動</summary>
+          <div class="label">開始時間</div><input type="datetime-local" id="bwTime">
+          <div class="label">類型</div><div class="chips" id="bwType"></div>
+          <div class="label">時長（分鐘）</div><input type="number" id="bwMin" inputmode="numeric" min="1" max="600" placeholder="例如 45">
+          <div class="label">強度</div><div class="chips" id="bwInt"></div>
+          <div class="label">重訓內容（選填）：一行一個動作，「動作 重量 次數 組數」</div>
+          <textarea id="bwSets" rows="4" placeholder="深蹲 60 5 3&#10;臥推 40 8 3"></textarea>
+          <button class="btn primary" data-act="wkBackfill">儲存補登</button>
+        </details>
+      </div>
+    </section>
+
+    <!-- 飲食 -->
+    <section class="tab" id="t-food">
+      <div class="card">
+        <div class="label top">一鍵記錄</div>
+        <div class="chips" id="quickFoods"></div>
+        <div class="hint" id="quickHint"></div>
+      </div>
+      <div class="card">
+        <div class="label top">餐別</div><div class="chips" id="fMeal"></div>
+        <div class="label">份量</div><div class="chips" id="fPortion"></div>
+        <div class="label">吃了多少</div><div class="chips" id="fEaten"></div>
+        <div class="label">標籤（可複選）</div><div class="chips" id="fTags"></div>
+        <div class="label">補充說明（選填）</div>
+        <input type="text" id="fNote" maxlength="200" placeholder="例如：飯只吃半碗、加一顆滷蛋">
+        <div id="fPreview"></div>
+        <div class="row">
+          <button class="btn" data-act="cam">拍照</button>
+          <button class="btn" data-act="gallery">選照片</button>
+        </div>
+        <details id="fMore">
+          <summary>改時間，或直接輸入營養數字</summary>
+          <div class="label">時間</div><input type="datetime-local" id="fTime">
+          <div class="label">品項</div><input type="text" id="fName" maxlength="80" placeholder="例如：雞腿便當">
+          <div class="grid2">
+            <label>熱量 (kcal)<input type="number" id="fKcal" inputmode="decimal" min="0"></label>
+            <label>蛋白質 (g)<input type="number" id="fProt" inputmode="decimal" min="0"></label>
+            <label>醣類 (g)<input type="number" id="fCarb" inputmode="decimal" min="0"></label>
+            <label>脂肪 (g)<input type="number" id="fFat" inputmode="decimal" min="0"></label>
+          </div>
+        </details>
+        <button class="btn primary" data-act="saveMeal">儲存這餐</button>
+      </div>
+      <div class="card">
+        <div class="row daynav">
+          <button class="btn fit" data-act="dayShift" data-d="-1" aria-label="前一天">◀</button>
+          <button class="btn fit grow" data-act="dayToday" id="fDate"></button>
+          <button class="btn fit" data-act="dayShift" data-d="1" aria-label="後一天">▶</button>
+        </div>
+        <div id="dayTotals"></div>
+        <div id="mealList"></div>
+        <div id="adviceBox"></div>
+      </div>
+    </section>
+
+    <!-- 統計 -->
+    <section class="tab" id="t-stats"></section>
+
+    <!-- 更多 -->
+    <section class="tab" id="t-more"></section>
+  </main>
+
+  <nav id="nav">
+    <button data-tab="sleep" class="on">睡眠</button>
+    <button data-tab="workout">健身</button>
+    <button data-tab="food">飲食</button>
+    <button data-tab="stats">統計</button>
+    <button data-tab="more">更多</button>
+  </nav>
+</div>
+
+<div id="modal" hidden><div class="modal-box" id="modalBox"></div></div>
+<div id="snack"></div>
+<input type="file" accept="image/*" capture="environment" id="cam" hidden>
+<input type="file" accept="image/*" id="gallery" hidden>
+<script src="app.js"></script>
+</body>
+</html>
